@@ -1147,7 +1147,6 @@
             border-radius: 2px;
         }
 
-        /* Subject management */
         .subject-list-item {
             display: flex;
             align-items: center;
@@ -1235,7 +1234,6 @@
                 <button class="btn btn-red" style="padding:0.2rem 0.55rem; font-size:0.5rem;" onclick="closeSettings()">✕ CLOSE</button>
             </div>
 
-            <!-- THEMES -->
             <div class="settings-section">
                 <div class="label mb-1" style="font-size:0.55rem;">◈ INTERFACE COLOR PROTOCOL</div>
                 <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:0.5rem;">Select your hunter system theme.</div>
@@ -1271,7 +1269,6 @@
                 </div>
             </div>
 
-            <!-- SUBJECT MANAGEMENT -->
             <div class="settings-section">
                 <div class="label mb-1" style="font-size:0.55rem;">📚 SUBJECT MANAGEMENT</div>
                 <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:0.5rem;">
@@ -1289,7 +1286,6 @@
                 </div>
             </div>
 
-            <!-- SOUND -->
             <div class="settings-section">
                 <div class="label mb-1" style="font-size:0.55rem;">🔊 SOUND CONFIGURATION</div>
                 <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:0.5rem;">Adjust audio feedback volume and style.</div>
@@ -1309,7 +1305,6 @@
                 </div>
             </div>
 
-            <!-- ACCOUNTS -->
             <div class="settings-section">
                 <div class="label mb-1" style="font-size:0.55rem;">◈ HUNTER ACCOUNTS</div>
                 <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:0.75rem;">Each account has its own XP, quests, stats and progress.</div>
@@ -1320,7 +1315,6 @@
                 </div>
             </div>
 
-            <!-- BACKUP -->
             <div class="settings-section">
                 <div class="label mb-1" style="font-size:0.55rem;">💾 BACKUP & RESTORE</div>
                 <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:0.5rem;">Export your data as a backup file or import a saved backup.</div>
@@ -1331,7 +1325,6 @@
                 </div>
             </div>
 
-            <!-- DANGER -->
             <div class="settings-section">
                 <div class="label mb-2" style="font-size:0.55rem; color:var(--danger);">◈ DANGER ZONE</div>
                 <button class="btn btn-red" style="font-size:0.52rem; width:100%;" onclick="confirmReset()">⚠ RESET CURRENT ACCOUNT DATA</button>
@@ -1339,7 +1332,6 @@
         </div>
     </div>
 
-    <!-- WEEKLY REVIEW MODAL -->
     <div id="weekly-review-modal" onclick="if(event.target===this) closeWeeklyReview()">
         <div class="weekly-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -1350,7 +1342,6 @@
         </div>
     </div>
 
-    <!-- NOTES MODAL -->
     <div id="notes-modal" style="display:none; position:fixed; inset:0; z-index:9996; background:rgba(0,0,0,0.85); justify-content:center; align-items:center;">
         <div class="panel" style="padding:1.5rem; width:min(440px,92vw); border-color:rgba(0,229,255,0.3);">
             <div class="label label-cyan mb-3" style="font-size:0.55rem;">📝 SESSION NOTES</div>
@@ -1764,9 +1755,9 @@
             level: 1,
             xp: 0,
             totalXp: 0,
-            subjects: [], // [{id, name, stat}]
-            stats: {}, // { subjectId: level }
-            studyMins: {}, // { subjectId: minutes }
+            subjects: [],
+            stats: {},
+            studyMins: {},
             quests: [],
             logs: [],
             dailyDateString: "",
@@ -1779,7 +1770,7 @@
             dailyXpHistory: [],
             soundVolume: 0.5,
             soundPack: 'cyber',
-            notifiedQuests: {} // track which quests have been notified
+            notifiedQuests: {}
         };
 
         // ══════════════════════════════════════════════════════════
@@ -2101,7 +2092,6 @@
                 soundPack: 'cyber',
                 notifiedQuests: {}
             };
-            // Initialize stats for default subjects
             blank.subjects.forEach(s => {
                 blank.stats[s.id] = 1;
                 blank.studyMins[s.id] = 0;
@@ -2117,7 +2107,6 @@
                 if (data) {
                     const parsed = JSON.parse(data);
                     G = Object.assign({}, makeBlankG(), parsed);
-                    // Ensure subjects exist and stats are aligned
                     if (!G.subjects || G.subjects.length === 0) {
                         G.subjects = JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
                     }
@@ -2271,7 +2260,6 @@
                 container.appendChild(div);
             });
 
-            // Update subject dropdowns in quest form and timer
             populateSubjectDropdowns();
         }
 
@@ -2310,7 +2298,6 @@
                 showToast("ERROR", "Maximum 10 subjects allowed.", "t-error");
                 return;
             }
-            // Generate ID from name
             const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
             if (G.subjects.some(s => s.id === id)) {
                 playSound('error');
@@ -2343,13 +2330,10 @@
             }
             if (!confirm(`Remove "${getSubjectName(id)}"? This will delete its stats and any quests linked to it.`)) return;
 
-            // Remove from subjects
             G.subjects = G.subjects.filter(s => s.id !== id);
             delete G.stats[id];
             delete G.studyMins[id];
-            // Remove any quests linked to this subject
             G.quests = G.quests.filter(q => q.subject !== id);
-            // If daily focus was this subject, reset it
             if (G.dailyFocus.subject === id) {
                 G.dailyFocus.subject = G.subjects.length > 0 ? G.subjects[0].id : null;
             }
@@ -2364,8 +2348,6 @@
         function resetToDefaultSubjects() {
             if (!confirm('Reset to IBDP default subjects? This will remove custom subjects and reset all stats to level 1.')) return;
 
-            const defaultIds = DEFAULT_SUBJECTS.map(s => s.id);
-            // Keep existing stats for subjects that match default
             const oldStats = { ...G.stats };
             const oldMins = { ...G.studyMins };
 
@@ -2376,7 +2358,6 @@
                 G.stats[s.id] = oldStats[s.id] || 1;
                 G.studyMins[s.id] = oldMins[s.id] || 0;
             });
-            // Remove quests for subjects that no longer exist
             G.quests = G.quests.filter(q => G.subjects.some(s => s.id === q.subject));
 
             if (G.dailyFocus.subject && !G.subjects.some(s => s.id === G.dailyFocus.subject)) {
@@ -2445,10 +2426,8 @@
                 if (shouldMigrate) {
                     try {
                         const parsed = JSON.parse(legacy);
-                        // Convert old format if needed
                         if (!parsed.subjects || parsed.subjects.length === 0) {
                             parsed.subjects = JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
-                            // Ensure stats exist for all default subjects
                             parsed.subjects.forEach(s => {
                                 if (parsed.stats[s.id] === undefined) parsed.stats[s.id] = 1;
                                 if (parsed.studyMins[s.id] === undefined) parsed.studyMins[s.id] = 0;
@@ -2555,14 +2534,34 @@
         function generateDailyMissions(targetDateStr) {
             G.dailyDateString = targetDateStr;
 
+            // ─── Core Mission – Expanded Options ──────────────────────
             const coreOptions = [
+               // Study Minutes
+                { type: "minutes", target: 25, text: "Exceed 25 aggregate study minutes inside the training room today." },
+                { type: "minutes", target: 30, text: "Exceed 30 aggregate study minutes inside the training room today." },
                 { type: "minutes", target: 45, text: "Exceed 45 aggregate study minutes inside the training room today." },
+                { type: "minutes", target: 60, text: "Exceed 60 aggregate study minutes inside the training room today." },
+                { type: "minutes", target: 75, text: "Exceed 75 aggregate study minutes inside the training room today." },
                 { type: "minutes", target: 90, text: "Exceed 90 aggregate study minutes inside the training room today." },
-                { type: "xp", target: 60, text: "Acquire an incremental addition of +60 XP across system channels today." },
-                { type: "xp", target: 120, text: "Acquire an incremental addition of +120 XP across system channels today." },
+                { type: "minutes", target: 120, text: "Exceed 120 aggregate study minutes inside the training room today." },
+
+                // XP Gain
+                { type: "xp", target: 25, text: "Acquire an incremental addition of +25 XP across system channels today." },
+                { type: "xp", target: 40, text: "Acquire an incremental addition of +40 XP across system channels today." },
+                { type: "xp", target: 50, text: "Acquire an incremental addition of +50 XP across system channels today." },
+                { type: "xp", target: 75, text: "Acquire an incremental addition of +75 XP across system channels today." },
+                { type: "xp", target: 100, text: "Acquire an incremental addition of +100 XP across system channels today." },
+                { type: "xp", target: 125, text: "Acquire an incremental addition of +125 XP across system channels today." },
+                { type: "xp", target: 150, text: "Acquire an incremental addition of +150 XP across system channels today." },
+                { type: "xp", target: 200, text: "Acquire an incremental addition of +200 XP across system channels today." },
+
+                // Quest Completion
                 { type: "quests", target: 1, text: "Authorize and successfully clear 1 active Quest objective today." },
-                { type: "quests", target: 2, text: "Authorize and successfully clear 2 active Quest objectives today." }
+                { type: "quests", target: 2, text: "Authorize and successfully clear 2 active Quest objectives today." },
+                { type: "quests", target: 3, text: "Authorize and successfully clear 3 active Quest objectives today." },
+                { type: "quests", target: 4, text: "Authorize and successfully clear 4 active Quest objectives today." }
             ];
+
             const selectedCore = coreOptions[Math.floor(Math.random() * coreOptions.length)];
             G.dailyCore = {
                 type: selectedCore.type,
@@ -2570,10 +2569,10 @@
                 text: selectedCore.text,
                 current: 0,
                 done: false,
-                xp: 50
+                xp: 50 // fixed reward for core missions
             };
 
-            // Focus selection based on neglect (stats + study minutes)
+            // ─── Focus Selection – Weighted Random (unchanged) ─────────
             const subjects = G.subjects || [];
             if (subjects.length === 0) {
                 G.dailyFocus = { subject: null, target: 30, current: 0, done: false, xp: 30 };
@@ -2583,11 +2582,11 @@
 
             const stats = getStats();
             const mins = getStudyMins();
+
             let maxStat = -Infinity,
                 minStat = Infinity;
             let maxMins = -Infinity,
                 minMins = Infinity;
-
             subjects.forEach(s => {
                 const stat = stats[s.id] || 1;
                 const min = mins[s.id] || 0;
@@ -2600,9 +2599,8 @@
             const statRange = Math.max(1, maxStat - minStat);
             const minsRange = Math.max(1, maxMins - minMins);
 
-            let bestKey = subjects[0].id;
-            let bestScore = -Infinity;
-
+            const scores = {};
+            let totalScore = 0;
             subjects.forEach(s => {
                 const stat = stats[s.id] || 1;
                 const min = mins[s.id] || 0;
@@ -2611,24 +2609,32 @@
                 let score = statNeglect * 0.6 + minsNeglect * 0.4;
                 if (stat <= 1 && min < 5) score += 0.3;
                 if (stat <= 2 && min < 10) score += 0.15;
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestKey = s.id;
+                scores[s.id] = Math.max(score, 0.01);
+                totalScore += scores[s.id];
+         });
+
+            let random = Math.random() * totalScore;
+            let chosenId = subjects[0].id;
+            for (let s of subjects) {
+                random -= scores[s.id];
+                if (random <= 0) {
+                    chosenId = s.id;
+                    break;
                 }
-            });
+            }
 
             const focusMinutesOptions = [30, 45, 60];
             const assignedMinutes = focusMinutesOptions[Math.floor(Math.random() * focusMinutesOptions.length)];
 
             G.dailyFocus = {
-                subject: bestKey,
+                subject: chosenId,
                 target: assignedMinutes,
                 current: 0,
                 done: false,
                 xp: 30
             };
 
-            createSystemLog('SYSTEM', 'Midnight threshold verified. New Daily Objective matrix computed.');
+            createSystemLog('SYSTEM', `Daily Core: ${selectedCore.text} | Focus: ${getSubjectName(chosenId)}`);
             save();
         }
 
@@ -2677,7 +2683,6 @@
             G.lastCompletedDay = todayStr;
             if (G.streak > 1) createSystemLog('SYSTEM', `🔥 STREAK SUSTAINED: ${G.streak} consecutive days.`);
 
-            // Random stat boost
             const subjects = G.subjects || [];
             if (subjects.length > 0) {
                 const picked = subjects[Math.floor(Math.random() * subjects.length)];
@@ -2710,196 +2715,238 @@
         }
 
         // ══════════════════════════════════════════════════════════
-        // SPIDER CHART (Dynamic axes)
+        // SPIDER CHART (Dynamic axes, auto‑scale to nearest 10, no numbers)
         // ══════════════════════════════════════════════════════════
-        
+
         function renderSpiderChart() {
-  const canvas = document.getElementById('spider-chart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width,
-    H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  const subjects = G.subjects || [];
-  const n = subjects.length;
-  if (n < 3) {
-    ctx.fillStyle = 'var(--text-dim)';
-    ctx.font = '12px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Add at least 3 subjects', W / 2, H / 2);
-    return;
-  }
-
-  const cx = W / 2,
-    cy = H / 2;
-  const radius = Math.min(W, H) / 2 - 42;
-
-  const stats = getStats();
-  
-  // ─── AUTO‑SCALE LOGIC ──────────────────────────────────────
-  let actualMax = 1;
-  subjects.forEach(s => { const val = stats[s.id] || 1; if (val > actualMax) actualMax = val; });
-  const maxVal = Math.max(10, Math.ceil(actualMax / 10) * 10);
-
-  // ─── Grid rings (no numbers) ──────────────────────────────────
-  for (let l = 1; l <= 4; l++) {
-    const r = (radius / 4) * l;
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
-      const x = cx + r * Math.cos(angle),
-        y = cy + r * Math.sin(angle);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = 'rgba(37,37,53,0.7)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  // ─── Axes and labels ──────────────────────────────────────────
-  subjects.forEach((s, i) => {
-    const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
-    const x = cx + radius * Math.cos(angle),
-      y = cy + radius * Math.sin(angle);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = 'rgba(0,229,255,0.12)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    const labelRadius = radius + 20;
-    const lx = cx + labelRadius * Math.cos(angle);
-    const ly = cy + labelRadius * Math.sin(angle);
-    ctx.font = (n > 6 ? '8px' : '10px') + " 'Orbitron', monospace";
-    ctx.fillStyle = '#00E5FF';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = '#00E5FF';
-    ctx.fillText(`${s.stat} (${stats[s.id] || 1})`, lx, ly);
-    ctx.shadowBlur = 0;
-  });
-
-  // ─── Filled polygon ────────────────────────────────────────────
-  ctx.beginPath();
-  subjects.forEach((s, i) => {
-    const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
-    const r = ((stats[s.id] || 1) / maxVal) * radius;
-    const x = cx + r * Math.cos(angle),
-      y = cy + r * Math.sin(angle);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(0,229,255,0.14)';
-  ctx.fill();
-  ctx.strokeStyle = '#00E5FF';
-  ctx.lineWidth = 2;
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#00E5FF';
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // ─── Vertex dots ──────────────────────────────────────────────
-  subjects.forEach((s, i) => {
-    const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
-    const r = ((stats[s.id] || 1) / maxVal) * radius;
-    const x = cx + r * Math.cos(angle),
-      y = cy + r * Math.sin(angle);
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#00E5FF';
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#00E5FF';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-  });
-}
-        // ══════════════════════════════════════════════════════════
-        // ANALYTICS CHART
-        // ══════════════════════════════════════════════════════════
-
-        function renderAnalyticsChart() {
-            const canvas = document.getElementById('analytics-chart');
+            const canvas = document.getElementById('spider-chart');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             const W = canvas.width,
                 H = canvas.height;
             ctx.clearRect(0, 0, W, H);
 
-            const history = G.dailyXpHistory || [];
-            const data = history.slice(-14);
-            if (data.length === 0) {
+            const subjects = G.subjects || [];
+            const n = subjects.length;
+            if (n < 3) {
                 ctx.fillStyle = 'var(--text-dim)';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('No data yet — start studying!', W / 2, H / 2);
+                ctx.fillText('Add at least 3 subjects', W / 2, H / 2);
                 return;
             }
 
-            const maxVal = Math.max(...data.map(d => d.xp), 10);
-            const padding = { top: 15, bottom: 25, left: 30, right: 10 };
-            const chartW = W - padding.left - padding.right;
-            const chartH = H - padding.top - padding.bottom;
+            const cx = W / 2,
+                cy = H / 2;
+            const radius = Math.min(W, H) / 2 - 42;
 
-            for (let i = 0; i <= 4; i++) {
-                const y = padding.top + chartH - (i / 4) * chartH;
+            const stats = getStats();
+
+            let actualMax = 1;
+            subjects.forEach(s => { const val = stats[s.id] || 1; if (val > actualMax) actualMax = val; });
+            const maxVal = Math.max(10, Math.ceil(actualMax / 10) * 10);
+
+            for (let l = 1; l <= 4; l++) {
+                const r = (radius / 4) * l;
                 ctx.beginPath();
-                ctx.moveTo(padding.left, y);
-                ctx.lineTo(W - padding.right, y);
-                ctx.strokeStyle = 'rgba(37,37,53,0.5)';
-                ctx.lineWidth = 0.5;
+                for (let i = 0; i < n; i++) {
+                    const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+                    const x = cx + r * Math.cos(angle),
+                        y = cy + r * Math.sin(angle);
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(37,37,53,0.7)';
+                ctx.lineWidth = 1;
                 ctx.stroke();
-                ctx.fillStyle = 'var(--text-dim)';
-                ctx.font = '7px monospace';
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(Math.round((i / 4) * maxVal), padding.left - 4, y);
             }
 
-            const barWidth = chartW / data.length * 0.7;
-            const gap = chartW / data.length * 0.3;
-            data.forEach((d, i) => {
-                const x = padding.left + i * (chartW / data.length) + gap / 2;
-                const h = (d.xp / maxVal) * chartH;
-                const y = padding.top + chartH - h;
+            subjects.forEach((s, i) => {
+                const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+                const x = cx + radius * Math.cos(angle),
+                    y = cy + radius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = 'rgba(0,229,255,0.12)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
 
-                const grad = ctx.createLinearGradient(x, y, x, padding.top + chartH);
-                grad.addColorStop(0, '#00E5FF');
-                grad.addColorStop(1, '#009DB5');
-                ctx.fillStyle = grad;
-                ctx.fillRect(x, y, barWidth, h);
-
-                const dateParts = d.date.split(' ');
-                const shortDate = dateParts.slice(0, 3).join(' ');
-                ctx.fillStyle = 'var(--text-dim)';
-                ctx.font = '6px monospace';
+                const labelRadius = radius + 20;
+                const lx = cx + labelRadius * Math.cos(angle);
+                const ly = cy + labelRadius * Math.sin(angle);
+                ctx.font = (n > 6 ? '8px' : '10px') + " 'Orbitron', monospace";
+                ctx.fillStyle = '#00E5FF';
+                ctx.textBaseline = 'middle';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(shortDate, x + barWidth / 2, padding.top + chartH + 2);
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#00E5FF';
+                ctx.fillText(`${s.stat} (${stats[s.id] || 1})`, lx, ly);
+                ctx.shadowBlur = 0;
             });
 
-            if (data.length > 1) {
+            ctx.beginPath();
+            subjects.forEach((s, i) => {
+                const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+                const r = ((stats[s.id] || 1) / maxVal) * radius;
+                const x = cx + r * Math.cos(angle),
+                    y = cy + r * Math.sin(angle);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0,229,255,0.14)';
+            ctx.fill();
+            ctx.strokeStyle = '#00E5FF';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#00E5FF';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            subjects.forEach((s, i) => {
+                const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+                const r = ((stats[s.id] || 1) / maxVal) * radius;
+                const x = cx + r * Math.cos(angle),
+                    y = cy + r * Math.sin(angle);
                 ctx.beginPath();
-                const totalMax = Math.max(...data.map(d => d.totalXp || 0), 1);
-                data.forEach((d, i) => {
-                    const x = padding.left + i * (chartW / data.length) + chartW / data.length / 2;
-                    const y = padding.top + chartH - (d.totalXp / totalMax) * chartH * 0.7;
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                });
-                ctx.strokeStyle = 'rgba(255,215,0,0.6)';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([3, 3]);
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#00E5FF';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00E5FF';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 1.2;
                 ctx.stroke();
-                ctx.setLineDash([]);
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════
+        // ANALYTICS CHART
+        // ══════════════════════════════════════════════════════════
+
+        function renderAnalyticsChart() {
+          const canvas = document.getElementById('analytics-chart');
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          const W = canvas.width,
+            H = canvas.height;
+          ctx.clearRect(0, 0, W, H);
+
+          const history = G.dailyXpHistory || [];
+          const data = history.slice(-14);
+          if (data.length === 0) {
+            ctx.fillStyle = '#8A8AA8';
+            ctx.font = '14px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No data yet — start studying!', W / 2, H / 2);
+            return;
+          }
+
+          const maxVal = Math.max(...data.map(d => d.xp), 10);
+          const padding = { top: 25, bottom: 35, left: 45, right: 20 };
+          const chartW = W - padding.left - padding.right;
+          const chartH = H - padding.top - padding.bottom;
+
+          // ─── Grid lines ──────────────────────────────────────────────
+          for (let i = 0; i <= 4; i++) {
+            const y = padding.top + chartH - (i / 4) * chartH;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(W - padding.right, y);
+            ctx.strokeStyle = 'rgba(37,37,53,0.6)';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+
+            // ─── Y‑axis labels (larger, brighter) ──────────────────────
+            ctx.fillStyle = '#8A8AA8';
+            ctx.font = '10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(Math.round((i / 4) * maxVal), padding.left - 8, y);
+          }
+
+              // ─── Draw scatter plot points and line ──────────────────────
+          const points = data.map((d, i) => {
+            const x = padding.left + i * (chartW / (data.length - 1 || 1));
+            const y = padding.top + chartH - (d.xp / maxVal) * chartH;
+            return { x, y, xp: d.xp, date: d.date };
+          });
+
+          // Draw connecting line with glow
+          ctx.beginPath();
+          points.forEach((p, i) => {
+            i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+          });
+          ctx.strokeStyle = '#00E5FF';
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#00E5FF';
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Draw data points (scatter dots)
+          points.forEach((p) => {
+            // Outer glow
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 12);
+            grad.addColorStop(0, 'rgba(0,229,255,0.3)');
+            grad.addColorStop(1, 'rgba(0,229,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main dot
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#00E5FF';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#00E5FF';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // White border for contrast
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Value label above each point (brighter, larger)
+            ctx.fillStyle = '#E2E2EF';
+            ctx.font = 'bold 9px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(p.xp, p.x, p.y - 8);
+          });
+
+          // ─── X‑axis date labels (larger, rotated for readability) ──
+          points.forEach((p, i) => {
+            const dateParts = p.date.split(' ');
+            const shortDate = dateParts.slice(0, 3).join(' ');
+            ctx.fillStyle = '#8A8AA8';
+            ctx.font = '9px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            // Rotate labels if there are many points
+            if (data.length > 8) {
+              ctx.save();
+              ctx.translate(p.x, padding.top + chartH + 6);
+              ctx.rotate(-0.4);
+              ctx.fillText(shortDate, 0, 0);
+              ctx.restore();
+            } else {
+              ctx.fillText(shortDate, p.x, padding.top + chartH + 6);
             }
+          });
+
+          // ─── Chart title ─────────────────────────────────────────────
+          ctx.fillStyle = '#5A5A72';
+          ctx.font = '9px "Orbitron", monospace';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'top';
+          ctx.fillText('XP per day', W - 10, 4);
         }
 
         // ══════════════════════════════════════════════════════════
@@ -3230,6 +3277,7 @@
                 setTimeout(checkDueQuests, 1000);
                 setInterval(checkDueQuests, 60000);
             }
+            populateSubjectDropdowns();
         }
 
         function renderAttributes() {
@@ -3634,15 +3682,18 @@
 
         function startTimer() {
             const subSelect = document.getElementById('t-subject');
-            const targetSub = subSelect.value;
+            const targetSub = subSelect ? subSelect.value : '';
 
-            if (!targetSub) { playSound('error');
-                showToast("CHAMBER ERROR", "Select parameters matrix before entering.", "t-warn"); return; }
+            if (!targetSub) {
+                playSound('error');
+                showToast("CHAMBER ERROR", "Select a subject first.", "t-warn");
+                return;
+            }
 
             if (!timerInterval) {
                 playSound('blip');
                 activeTimerSubject = targetSub;
-                subSelect.disabled = true;
+                if (subSelect) subSelect.disabled = true;
                 timerStartTimestamp = Date.now();
                 timerInterval = setInterval(updateTimerUI, 200);
 
@@ -3669,7 +3720,7 @@
                 document.getElementById('btn-timer-start').disabled = false;
                 document.getElementById('btn-timer-start').textContent = 'RESUME';
                 document.getElementById('btn-timer-pause').disabled = true;
-                createSystemLog('TRAINING', 'Timeline state inside active chamber suspended.');
+                createSystemLog('TRAINING', 'Timeline state suspended.');
             }
         }
 
@@ -3714,8 +3765,9 @@
             }
 
             activeTimerSubject = null;
-            document.getElementById('t-subject').disabled = false;
-            document.getElementById('t-subject').value = '';
+            const subSelect = document.getElementById('t-subject');
+            if (subSelect) subSelect.disabled = false;
+            if (subSelect) subSelect.value = '';
             document.getElementById('timer-display').classList.remove('running');
             document.getElementById('timer-active-badge').style.display = 'none';
             document.getElementById('btn-timer-start').disabled = false;
@@ -3876,6 +3928,8 @@
         // ─── App Bootstrap ──────────────────────────────────────────
         load();
         loadTheme();
+        // Populate dropdowns on load
+        populateSubjectDropdowns();
         renderAll();
     </script>
 
