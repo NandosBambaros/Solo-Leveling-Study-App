@@ -1408,6 +1408,9 @@
                     <div class="min-w-0 flex-1">
                         <div style="font-family:'Orbitron',monospace; font-size:0.7rem; font-weight:700; color:var(--text-primary);">HUNTER</div>
                         <div id="sb-rank-title" class="truncate font-bold" style="font-size:0.62rem; color:var(--gold); text-shadow: 0 0 4px rgba(255,215,0,0.3);">F-RANK NOVICE</div>
+                        <div id="sb-mastery-title" style="font-size:0.5rem; color:var(--text-mid); margin-top:2px; font-family:'Orbitron',monospace; letter-spacing:0.08em;">
+                          <span id="sb-mastery-emoji">⬜</span> <span id="sb-mastery-text">No Mastery</span>
+                        </div>
                         <div style="font-size:0.54rem; color:var(--text-dim);">ID: #001</div>
                     </div>
                 </div>
@@ -2520,6 +2523,14 @@
             return "F-RANK NOVICE";
         }
 
+        function getMasteryTitle(level) {
+            if (level >= 30) return { title: 'Legend', color: '#FFD700', emoji: '👑' };
+            if (level >= 20) return { title: 'Master', color: '#F97316', emoji: '⭐' };
+            if (level >= 15) return { title: 'Expert', color: '#A855F7', emoji: '💎' };
+            if (level >= 10) return { title: 'Adept', color: '#00E5FF', emoji: '🔷' };
+            if (level >= 5)  return { title: 'Apprentice', color: '#22C55E', emoji: '🌱' };
+            return { title: 'Novice', color: '#9CA3AF', emoji: '⬜' };
+    }
         // ══════════════════════════════════════════════════════════
         // DAILY PROTOCOLS
         // ══════════════════════════════════════════════════════════
@@ -3234,7 +3245,21 @@
 
             document.getElementById('sb-big-level').textContent = G.level;
             document.getElementById('sb-rank-title').textContent = calculateMilestoneTitle();
-
+            // ─── Highest Mastery Display ──────────────────────────────
+            const stats = getStats();
+            let highestMastery = { title: 'No Mastery', color: '#5A5A72', emoji: '⬜', level: 0 };
+            for (let id in stats) {
+                const lv = stats[id] || 1;
+                if (lv >= 5) {
+                    const m = getMasteryTitle(lv);
+                    if (lv > highestMastery.level) {
+                    highestMastery = { ...m, level: lv };
+                }
+            }
+        }
+document.getElementById('sb-mastery-emoji').textContent = highestMastery.emoji;
+document.getElementById('sb-mastery-text').textContent = highestMastery.title;
+document.getElementById('sb-mastery-text').style.color = highestMastery.color;
             const xpTrack = document.querySelector('.xp-track');
             if (xpTrack) pct >= 80 ? xpTrack.classList.add('xp-high') : xpTrack.classList.remove('xp-high');
 
@@ -3291,17 +3316,21 @@
                 const pct = Math.max(5, Math.min(100, (lv / (lv + 10)) * 100));
                 const color = getStatColor(s.stat);
 
+                const mastery = getMasteryTitle(lv);
                 const div = document.createElement('div');
                 div.className = 'flex flex-col gap-1';
                 div.innerHTML = `
-                    <div class="flex justify-between text-xs">
+                  <div class="flex justify-between text-xs">
+                    <div>
                       <span class="font-medium" style="color:var(--text-primary); font-size:0.7rem;">${escHtml(s.name)} <span style="color:var(--text-dim); font-size:0.6rem;">[${s.stat}]</span></span>
-                      <span class="font-bold font-orbitron" style="color:var(--cyan); font-size:0.75rem;">Lv. ${lv}</span>
+                      <span style="font-size:0.5rem; color:${mastery.color}; margin-left:0.4rem; font-family:'Orbitron',monospace; letter-spacing:0.05em;">${mastery.emoji} ${mastery.title}</span>
                     </div>
-                    <div class="stat-track">
-                      <div class="stat-fill" style="width: ${pct}%; background:${color}; box-shadow: 0 0 6px ${color};"></div>
-                    </div>
-                  `;
+                    <span class="font-bold font-orbitron" style="color:var(--cyan); font-size:0.75rem;">Lv. ${lv}</span>
+                  </div>
+                  <div class="stat-track">
+                    <div class="stat-fill" style="width: ${pct}%; background:${color}; box-shadow: 0 0 6px ${color};"></div>
+                  </div>
+                `;
                 container.appendChild(div);
             });
 
@@ -3317,10 +3346,24 @@
             activeBox.innerHTML = '';
             doneBox.innerHTML = '';
 
+            // ─── Rank order (highest first) ──────────────────────────
+            const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+            function rankIndex(rank) {
+                const idx = RANK_ORDER.indexOf(rank);
+                return idx === -1 ? 999 : idx; // unknown ranks go to bottom
+            }
+
+            const activeQuests = G.quests.filter(q => !q.done)
+                .sort((a, b) => rankIndex(a.rank) - rankIndex(b.rank));
+
+            const doneQuests = G.quests.filter(q => q.done)
+                .sort((a, b) => rankIndex(a.rank) - rankIndex(b.rank));
+
             let activeCount = 0;
             let doneCount = 0;
 
-            G.quests.forEach(q => {
+            // ─── Render Active Quests ────────────────────────────────────
+            activeQuests.forEach(q => {
                 const sub = getSubjectById(q.subject);
                 const subName = sub ? sub.name : "Unknown Subject";
                 const subStat = sub ? sub.stat : "??";
@@ -3342,40 +3385,74 @@
                 el.innerHTML = `
                     <div class="absolute left-0 top-0 bottom-0 w-1 rank-bar-${q.rank}"></div>
                     <div class="flex items-center gap-3 pl-1.5 min-w-0 flex-1">
-                      <div class="rank-badge rank-${q.rank}">${q.rank}</div>
-                      <div class="min-w-0 flex-1">
-                        <div class="font-medium text-xs text-ellipsis overflow-hidden whitespace-nowrap q-title" style="color:var(--text-primary); font-size:1.1rem;">${escHtml(q.title)}</div>
-                        <div style="font-size:0.75rem; color:var(--text-dim); margin-top:1px;">
-                          ${subName} · <span style="color:var(--text-mid);">EXP +${xpAmt}</span>
-                          ${showStatBonus ? ` · <span style="color:var(--cyan-dim); font-weight:500;">+1 ${subStat}</span>` : ''}
+                        <div class="rank-badge rank-${q.rank}">${q.rank}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium text-xs text-ellipsis overflow-hidden whitespace-nowrap q-title" style="color:var(--text-primary); font-size:1.1rem;">${escHtml(q.title)}</div>
+                            <div style="font-size:0.75rem; color:var(--text-dim); margin-top:1px;">
+                                ${subName} · <span style="color:var(--text-mid);">EXP +${xpAmt}</span>
+                                ${showStatBonus ? ` · <span style="color:var(--cyan-dim); font-weight:500;">+1 ${subStat}</span>` : ''}
+                            </div>
                         </div>
-                      </div>
                     </div>
                     <div class="flex items-center gap-3 flex-shrink-0">
-                      <span class="q-due-label label text-right font-mono" style="font-size:0.7rem; color:${isUrgent ? 'var(--danger)' : 'var(--text-mid)'};">${isUrgent ? '⚠ ' : ''}${dateStr}</span>
-                      <div class="actions flex gap-1.5">
-                        ${!q.done ? `
-                          <button class="btn btn-green" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="completeQuest(${q.id})">CLEARED</button>
-                          <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">ABANDON</button>
-                        ` : `
-                          <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">DELETE</button>
-                        `}
-                      </div>
+                        <span class="q-due-label label text-right font-mono" style="font-size:0.7rem; color:${isUrgent ? 'var(--danger)' : 'var(--text-mid)'};">${isUrgent ? '⚠ ' : ''}${dateStr}</span>
+                        <div class="actions flex gap-1.5">
+                            ${!q.done ? `
+                                <button class="btn btn-green" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="completeQuest(${q.id})">CLEARED</button>
+                                <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">ABANDON</button>
+                            ` : `
+                                <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">DELETE</button>
+                            `}
+                        </div>
                     </div>
-                  `;
+                `;
+                activeBox.appendChild(el);
+                activeCount++;
+            });
 
-                if (q.done) { doneBox.appendChild(el);
-                    doneCount++; } else { activeBox.appendChild(el);
-                    activeCount++; }
+            // ─── Render Done Quests ──────────────────────────────────────
+            doneQuests.forEach(q => {
+                const sub = getSubjectById(q.subject);
+                const subName = sub ? sub.name : "Unknown Subject";
+                const subStat = sub ? sub.stat : "??";
+                const dateStr = q.due ? q.due.split('-').slice(1).join('/') : '--/--';
+                const xpAmt = RANKS[q.rank]?.xp || 10;
+
+                const showStatBonus = ['B', 'A', 'S'].includes(q.rank);
+
+                const el = document.createElement('div');
+                el.className = `panel p-2.5 flex items-center justify-between gap-3 quest-card done`;
+                el.id = `q-card-${q.id}`;
+                el.innerHTML = `
+                    <div class="absolute left-0 top-0 bottom-0 w-1 rank-bar-${q.rank}"></div>
+                    <div class="flex items-center gap-3 pl-1.5 min-w-0 flex-1">
+                        <div class="rank-badge rank-${q.rank}">${q.rank}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium text-xs text-ellipsis overflow-hidden whitespace-nowrap q-title" style="color:var(--text-primary); font-size:1.1rem; text-decoration:line-through; opacity:0.6;">${escHtml(q.title)}</div>
+                            <div style="font-size:0.75rem; color:var(--text-dim); margin-top:1px;">
+                                ${subName} · <span style="color:var(--text-mid);">EXP +${xpAmt}</span>
+                                ${showStatBonus ? ` · <span style="color:var(--cyan-dim); font-weight:500;">+1 ${subStat}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <span class="q-due-label label text-right font-mono" style="font-size:0.7rem; color:var(--text-mid);">${dateStr}</span>
+                        <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">DELETE</button>
+                    </div>
+                `;
+                doneBox.appendChild(el);
+                doneCount++;
             });
 
             document.getElementById('active-count').textContent = activeCount;
             document.getElementById('done-count').textContent = doneCount;
 
-            if (activeCount === 0) { activeBox.innerHTML =
-                '<div class="empty-state">NO ACTIVE INTERCEPTED QUEUES CURRENTLY PRESENT.</div>'; }
-            if (doneCount === 0) { doneBox.innerHTML =
-            '<div class="empty-state">NO COMPLETED MISSIONS LOGGED IN ARCHIVE.</div>'; }
+            if (activeCount === 0) {
+                activeBox.innerHTML = '<div class="empty-state">NO ACTIVE INTERCEPTED QUEUES CURRENTLY PRESENT.</div>';
+            }
+            if (doneCount === 0) {
+                doneBox.innerHTML = '<div class="empty-state">NO COMPLETED MISSIONS LOGGED IN ARCHIVE.</div>';
+            }
         }
 
         function renderDailyMissionsPanel() {
