@@ -1211,6 +1211,15 @@
         .add-subject-form button {
             grid-column: span 2;
         }
+
+        .sort-btn {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+        }
+        .sort-btn:hover {
+            background: rgba(0,229,255,0.05) !important;
+        }
     </style>
 </head>
 <body>
@@ -1464,13 +1473,22 @@
         <div id="main">
 
             <div id="view-quests" class="view active">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1.25rem;">
+                <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:0.75rem; margin-bottom:1.25rem;">
                     <div>
                         <div class="label label-cyan" style="margin-bottom:0.3rem;">◈ QUEST BOARD</div>
                         <div style="font-size:0.65rem; color:var(--text-dim);">MISSION BROADCAST DATABASE — COMPREHENSIVE REWARD LAYOUT</div>
                     </div>
-                    <button class="btn btn-cyan" onclick="toggleQuestForm()">+ REGISTER QUEST</button>
+                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem;">
+                        <!-- Sort options -->
+                        <div style="display:flex; align-items:center; gap:0.3rem; background:rgba(0,229,255,0.04); border:1px solid var(--border); padding:0.2rem 0.3rem; border-radius:4px;">
+                        <span class="label" style="font-size:0.45rem;">SORT</span>
+                        <button class="btn sort-btn" data-sort="urgent" onclick="setQuestSort('urgent')" style="padding:0.15rem 0.5rem; font-size:0.45rem; border-color:transparent;">⚠ URGENT</button>
+                        <button class="btn sort-btn" data-sort="rank" onclick="setQuestSort('rank')" style="padding:0.15rem 0.5rem; font-size:0.45rem; border-color:transparent;">🏆 RANK</button>
+                        <button class="btn sort-btn" data-sort="date" onclick="setQuestSort('date')" style="padding:0.15rem 0.5rem; font-size:0.45rem; border-color:transparent;">📅 NEWEST</button>
+                    </div>
+                    <button class="btn btn-cyan" onclick="toggleQuestForm()" style="font-size:0.52rem; padding:0.3rem 0.7rem;">+ REGISTER QUEST</button>
                 </div>
+            </div>
 
                 <div id="quest-form" class="panel corners" style="display:none; margin-bottom:1.25rem; padding:1.25rem; border-color:rgba(0,229,255,0.22);">
                     <div class="label label-cyan mb-4" style="font-size:0.55rem;">◈ QUEST REGISTRATION CHANNEL</div>
@@ -1654,7 +1672,6 @@
 
         </div>
     </div>
-
     <script>
         'use strict';
 
@@ -1775,7 +1792,22 @@
             soundPack: 'cyber',
             notifiedQuests: {}
         };
+        // ─── Quest sort mode ──────────────────────────────────────────
+        let questSortMode = G.questSortMode || 'rank'; // 'urgent', 'rank', 'date'
 
+        function setQuestSort(mode) {
+            questSortMode = mode;
+            G.questSortMode = mode;
+            save();
+            renderQuests();
+            // Update active button styling
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.style.borderColor = btn.dataset.sort === mode ? 'var(--cyan)' : 'transparent';
+                btn.style.color = btn.dataset.sort === mode ? 'var(--cyan)' : 'var(--text-dim)';
+                btn.style.background = btn.dataset.sort === mode ? 'rgba(0,229,255,0.1)' : 'transparent';
+            });
+            showToast("SORT CHANGED", `Sorting by ${mode.toUpperCase()}`, "t-cyan");
+        }
         // ══════════════════════════════════════════════════════════
         // SUBJECT HELPERS
         // ══════════════════════════════════════════════════════════
@@ -3346,18 +3378,40 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
             activeBox.innerHTML = '';
             doneBox.innerHTML = '';
 
-            // ─── Rank order (highest first) ──────────────────────────
+            // ─── Sort Functions ──────────────────────────────────────────
+            function sortByUrgency(a, b) {
+                // If neither has a due date, rank takes precedence
+                if (!a.due && !b.due) return 0;
+                if (!a.due) return 1;
+                if (!b.due) return -1;
+                // If both have due dates, sort by soonest
+                const aDue = new Date(a.due + 'T23:59:59').getTime();
+                const bDue = new Date(b.due + 'T23:59:59').getTime();
+               return aDue - bDue;
+            }
+
             const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
             function rankIndex(rank) {
                 const idx = RANK_ORDER.indexOf(rank);
-                return idx === -1 ? 999 : idx; // unknown ranks go to bottom
+                return idx === -1 ? 999 : idx;
             }
 
-            const activeQuests = G.quests.filter(q => !q.done)
-                .sort((a, b) => rankIndex(a.rank) - rankIndex(b.rank));
+            function sortByRank(a, b) {
+                return rankIndex(a.rank) - rankIndex(b.rank);
+            }
 
-            const doneQuests = G.quests.filter(q => q.done)
-                .sort((a, b) => rankIndex(a.rank) - rankIndex(b.rank));
+            function sortByDate(a, b) {
+                return b.id - a.id; // newer first (higher timestamp)
+            }
+
+            // ─── Apply Sort ──────────────────────────────────────────────
+            let sortFn = sortByRank; // default
+            if (questSortMode === 'urgent') sortFn = sortByUrgency;
+            else if (questSortMode === 'date') sortFn = sortByDate;
+            // 'rank' is default
+
+            const activeQuests = G.quests.filter(q => !q.done).sort(sortFn);
+            const doneQuests = G.quests.filter(q => q.done).sort(sortFn);
 
             let activeCount = 0;
             let doneCount = 0;
@@ -3371,9 +3425,19 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
                 const xpAmt = RANKS[q.rank]?.xp || 10;
 
                 let isUrgent = false;
+                let urgencyLabel = '';
                 if (q.due && !q.done) {
-                    const diffHrs = (new Date(q.due + 'T23:59:59').getTime() - Date.now()) / 3600000;
+                    const now = Date.now();
+                    const dueDate = new Date(q.due + 'T23:59:59').getTime();
+                    const diffHrs = (dueDate - now) / 3600000;
                     isUrgent = diffHrs <= 48 && diffHrs >= 0;
+                    if (diffHrs > 0 && diffHrs < 24) {
+                        urgencyLabel = `⏰ ${Math.ceil(diffHrs)}h`;
+                    } else if (diffHrs > 0 && diffHrs < 48) {
+                        urgencyLabel = `⚠ ${Math.ceil(diffHrs/24)}d`;
+                    } else if (diffHrs < 0) {
+                        urgencyLabel = '⏳ OVERDUE';
+                    }
                 }
 
                 const showStatBonus = ['B', 'A', 'S'].includes(q.rank);
@@ -3391,6 +3455,7 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
                             <div style="font-size:0.75rem; color:var(--text-dim); margin-top:1px;">
                                 ${subName} · <span style="color:var(--text-mid);">EXP +${xpAmt}</span>
                                 ${showStatBonus ? ` · <span style="color:var(--cyan-dim); font-weight:500;">+1 ${subStat}</span>` : ''}
+                                ${urgencyLabel ? ` · <span style="color:${isUrgent ? 'var(--danger)' : 'var(--text-mid)'}; font-weight:${isUrgent ? 'bold' : 'normal'};">${urgencyLabel}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -3400,7 +3465,7 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
                             ${!q.done ? `
                                 <button class="btn btn-green" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="completeQuest(${q.id})">CLEARED</button>
                                 <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">ABANDON</button>
-                            ` : `
+                        ` : `
                                 <button class="btn btn-red" style="padding:0.25rem 0.5rem; font-size:0.52rem;" onclick="deleteQuest(${q.id})">DELETE</button>
                             `}
                         </div>
@@ -3421,7 +3486,7 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
                 const showStatBonus = ['B', 'A', 'S'].includes(q.rank);
 
                 const el = document.createElement('div');
-                el.className = `panel p-2.5 flex items-center justify-between gap-3 quest-card done`;
+               el.className = `panel p-2.5 flex items-center justify-between gap-3 quest-card done`;
                 el.id = `q-card-${q.id}`;
                 el.innerHTML = `
                     <div class="absolute left-0 top-0 bottom-0 w-1 rank-bar-${q.rank}"></div>
@@ -3453,6 +3518,15 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
             if (doneCount === 0) {
                 doneBox.innerHTML = '<div class="empty-state">NO COMPLETED MISSIONS LOGGED IN ARCHIVE.</div>';
             }
+
+            // ─── Update sort button states ──────────────────────────────
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                const mode = btn.dataset.sort;
+                const isActive = mode === questSortMode;
+                btn.style.borderColor = isActive ? 'var(--cyan)' : 'transparent';
+                btn.style.color = isActive ? 'var(--cyan)' : 'var(--text-dim)';
+                btn.style.background = isActive ? 'rgba(0,229,255,0.1)' : 'transparent';
+            });
         }
 
         function renderDailyMissionsPanel() {
@@ -4008,6 +4082,41 @@ document.getElementById('sb-mastery-text').style.color = highestMastery.color;
         // Populate dropdowns on load
         populateSubjectDropdowns();
         renderAll();
+        // Modified version – only reload if timer is not running
+        function scheduleMidnightRefresh() {
+            const now = new Date();
+            const night = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate() + 1,
+                0, 0, 0
+            );
+            const msUntilMidnight = night.getTime() - now.getTime();
+
+            setTimeout(() => {
+                // Check if timer is running
+                const isTimerRunning = timerInterval !== null;
+                if (isTimerRunning) {
+                    // Wait and check again in 5 minutes
+                    console.log('⏰ Timer is running, delaying midnight refresh...');
+                    setTimeout(() => {
+                        if (timerInterval === null) {
+                            save();
+                            location.reload();
+                        } else {
+                            // Force reload anyway after 10 minutes
+                            setTimeout(() => {
+                                save();
+                                location.reload();
+                            }, 600000); // 10 minutes
+                        }
+                    }, 300000); // 5 minutes
+                } else {
+                    save();
+                    location.reload();
+                }
+            }, msUntilMidnight);
+        }
     </script>
 
 </body>
