@@ -8,8 +8,3 @@ chrome.action.onClicked.addListener(() => {
         focused: true
     });
 });
-
-// Optional: Handle installation
-chrome.runtime.onInstalled.addListener(() => {
-    console.log('Hunter\'s System installed!');
-});
